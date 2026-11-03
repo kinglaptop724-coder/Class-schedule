@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Scheduler | ระบบจัดตารางสอน</title>
+<meta name="theme-color" content="#0b3d91">
+<meta name="description" content="ระบบช่วยจัดตารางสอน โรงเรียนอนุบาลชุมชนหนองบัวแดง">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ตารางสอน">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  html,body{margin:0;height:100%;background:#0b3d91;overflow:hidden}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff;
+       padding-top:env(safe-area-inset-top);box-sizing:border-box;background-clip:content-box}
+  #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:18px;background:linear-gradient(135deg,#3b9bff,#0057c2);color:#fff;
+          font-family:system-ui,-apple-system,"Sarabun","Noto Sans Thai",sans-serif;transition:opacity .4s}
+  #splash img{width:96px;height:96px;border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+  #splash .spin{width:28px;height:28px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:s 1s linear infinite}
+  #splash p{margin:0;font-size:15px;opacity:.9}
+  #splash a{color:#fff;text-decoration:underline}
+  #hint{display:none}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="splash">
+  <img src="icons/icon-192.png" alt="">
+  <div class="spin"></div>
+  <p>กำลังโหลดระบบจัดตารางสอน...</p>
+  <p id="hint">โหลดนานกว่าปกติ <a href="#" id="retry">ลองใหม่</a> หรือ <a href="#" id="direct">เปิดโดยตรง</a></p>
+</div>
+<iframe id="app" title="ระบบจัดตารางสอน" allow="clipboard-write; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+<script>
+/* ===== ตั้งค่าเพียงจุดเดียว =====
+   ใส่ URL ของ Web App จาก Apps Script (Deploy → Web app) ที่ลงท้ายด้วย /exec
+   หน้าตาและโค้ดทั้งหมดอยู่ใน Apps Script — แก้ที่นั่นแล้วที่นี่อัปเดตตามอัตโนมัติ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD6AcfsOANx1zrg-MC_YJwDu7I4ZI84BnFLtFqb-HNdBq_q0nuJv1Z6znMPnmCqO4LGQ/exec';
+
+const frame = document.getElementById('app');
+const splash = document.getElementById('splash');
+const hint = document.getElementById('hint');
+let timer;
+
+function load() {
+  splash.style.display = 'flex'; splash.style.opacity = 1; hint.style.display = 'none';
+  clearTimeout(timer);
+  timer = setTimeout(() => hint.style.display = 'block', 12000);
+  frame.src = APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+}
+frame.addEventListener('load', () => {
+  clearTimeout(timer);
+  splash.style.opacity = 0;
+  setTimeout(() => splash.style.display = 'none', 400);
+});
+document.getElementById('retry').onclick = e => { e.preventDefault(); load(); };
+document.getElementById('direct').onclick = e => { e.preventDefault(); location.href = APPS_SCRIPT_URL; };
+
+if (!/^https:\/\/script\.google\.com\//.test(APPS_SCRIPT_URL)) {
+  document.querySelector('#splash p').innerHTML = 'ยังไม่ได้ตั้งค่า APPS_SCRIPT_URL ใน index.html';
+  document.querySelector('.spin').style.display = 'none';
+} else {
+  load();
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
