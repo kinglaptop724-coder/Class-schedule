@@ -1,5 +1,5 @@
 // แคชเฉพาะ "เปลือก" ของแอป (ไอคอน/หน้าเปิด) — ตัวระบบจริงโหลดสดจาก Apps Script เสมอ
-const CACHE = 'scheduler-shell-v1';
+const CACHE = 'scheduler-shell-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
