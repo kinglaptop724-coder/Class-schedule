@@ -26,6 +26,23 @@
   #splash a{color:#fff;text-decoration:underline}
   #hint{display:none}
   @keyframes s{to{transform:rotate(360deg)}}
+  #install{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:10;display:none;
+           align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#fff;color:#0f172a;
+           box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:system-ui,-apple-system,"Sarabun","Noto Sans Thai",sans-serif;
+           max-width:460px;margin:0 auto;animation:up .35s ease}
+  #install img{width:48px;height:48px;border-radius:12px;flex:none}
+  #install .t{flex:1;min-width:0;font-size:14px;line-height:1.35}
+  #install .t b{display:block;font-size:15px}
+  #install .t span{color:#475569;font-size:13px}
+  #install button{border:0;border-radius:12px;padding:10px 16px;font:600 14px system-ui,sans-serif;cursor:pointer}
+  #install .go{background:linear-gradient(135deg,#3b9bff,#0057c2);color:#fff}
+  #install .no{background:transparent;color:#64748b;padding:10px 8px}
+  #ios{position:fixed;inset:0;z-index:11;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5);
+       font-family:system-ui,-apple-system,"Sarabun","Noto Sans Thai",sans-serif}
+  #ios .card{background:#fff;color:#0f172a;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));animation:up .3s ease}
+  #ios h3{margin:0 0 10px;font-size:17px} #ios ol{margin:0 0 14px;padding-left:20px;line-height:1.8;font-size:15px}
+  #ios button{width:100%;border:0;border-radius:12px;padding:12px;background:#0b3d91;color:#fff;font:600 15px system-ui,sans-serif}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
@@ -36,6 +53,20 @@
   <p id="hint">โหลดนานกว่าปกติ <a href="#" id="retry">ลองใหม่</a> หรือ <a href="#" id="direct">เปิดโดยตรง</a></p>
 </div>
 <iframe id="app" title="ระบบจัดตารางสอน" allow="clipboard-write; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+<div id="install">
+  <img src="icons/icon-192.png" alt="">
+  <div class="t"><b>ติดตั้งแอปตารางสอน</b><span id="install-sub">เปิดใช้งานได้จากหน้าจอหลัก เหมือนแอปทั่วไป</span></div>
+  <button class="go" id="install-go">ติดตั้ง</button>
+  <button class="no" id="install-no" aria-label="ปิด">ภายหลัง</button>
+</div>
+<div id="ios"><div class="card">
+  <h3>ติดตั้งบน iPhone / iPad</h3>
+  <ol><li>แตะปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น) ที่แถบล่างของ Safari</li>
+      <li>เลื่อนหาแล้วแตะ <b>เพิ่มไปยังหน้าจอโฮม</b></li>
+      <li>แตะ <b>เพิ่ม</b> ที่มุมขวาบน</li></ol>
+  <button id="ios-ok">เข้าใจแล้ว</button>
+</div></div>
 
 <script>
 /* ===== ตั้งค่าเพียงจุดเดียว =====
@@ -68,6 +99,39 @@ if (!/^https:\/\/script\.google\.com\//.test(APPS_SCRIPT_URL)) {
 } else {
   load();
 }
+
+/* ===== ถามติดตั้งแอป ===== */
+(function () {
+  const bar = document.getElementById('install');
+  const ios = document.getElementById('ios');
+  const KEY = 'installDismissedAt';
+  const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let deferred = null;
+
+  const dismissed = () => { try { const t = +localStorage.getItem(KEY); return t && Date.now() - t < 7 * 864e5; } catch (e) { return false; } };
+  const remember = () => { try { localStorage.setItem(KEY, Date.now()); } catch (e) {} };
+  const show = () => { if (!isStandalone && !dismissed()) setTimeout(() => bar.style.display = 'flex', 1500); };
+
+  if (isStandalone) return;
+
+  // Android / Chrome / Edge: ใช้พรอมต์ติดตั้งของเบราว์เซอร์
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; show(); });
+  window.addEventListener('appinstalled', () => { bar.style.display = 'none'; deferred = null; });
+
+  // iOS Safari: ไม่มีพรอมต์อัตโนมัติ แสดงวิธีติดตั้งแทน
+  if (isIOS) { document.getElementById('install-sub').textContent = 'แตะ "ติดตั้ง" เพื่อดูวิธีเพิ่มลงหน้าจอโฮม'; show(); }
+
+  document.getElementById('install-go').onclick = async () => {
+    if (deferred) {
+      deferred.prompt();
+      await deferred.userChoice.catch(() => {});
+      deferred = null; bar.style.display = 'none';
+    } else if (isIOS) { ios.style.display = 'flex'; }
+  };
+  document.getElementById('install-no').onclick = () => { bar.style.display = 'none'; remember(); };
+  document.getElementById('ios-ok').onclick = () => { ios.style.display = 'none'; bar.style.display = 'none'; remember(); };
+})();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
